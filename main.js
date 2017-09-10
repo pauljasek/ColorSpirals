@@ -45,7 +45,7 @@
 
 
         first.target.dispatchEvent(simulatedEvent);
-        //event.preventDefault();
+        event.preventDefault();
     }
     document.addEventListener("touchstart", touchHandler, true);
     document.addEventListener("touchmove", touchHandler, true);
@@ -66,6 +66,9 @@
     var x = 0;
     var y = 0;
     var mouseDown = false;
+    var pointer = false;
+
+    var showDisplayCoolDown = 0;
 
     canvas.addEventListener("mousemove", function (e) {
         var rect = canvas.getBoundingClientRect();
@@ -74,6 +77,8 @@
 
         x = (e.clientX - rect.left) * scaleX * HEIGHT/canvas.height;
         y = (e.clientY - rect.top) * scaleY * HEIGHT/canvas.height;
+
+        showDisplayCoolDown = 2000;
     },false);
 
     canvas.addEventListener("mousedown", function (e) {
@@ -84,6 +89,8 @@
         x = (e.clientX - rect.left) * scaleX * HEIGHT/canvas.height;
         y = (e.clientY - rect.top) * scaleY * HEIGHT/canvas.height;
         mouseDown = true;
+
+        showDisplayCoolDown = 2000;
     },false);
     canvas.addEventListener("mouseup", function (e) {
         var rect = canvas.getBoundingClientRect();
@@ -93,9 +100,11 @@
         x = (e.clientX - rect.left) * scaleX * HEIGHT/canvas.height;
         y = (e.clientY - rect.top) * scaleY * HEIGHT/canvas.height;
         mouseDown = false;
+
+        showDisplayCoolDown = 2000;
     },false);
 
-    function drawText(x, y, text, color, font, centered, stroke, strokeColor)
+    function drawText(ctx, x, y, text, color, font, centered, stroke, strokeColor)
     {
         ctx.save();
         ctx.fillStyle = color;
@@ -129,6 +138,7 @@
         changed: false,
         waitForInput: true,
         color: "#FFF",
+        disabledColor: "#999",
         displayValue: false,
         enabled: true,
         value: function()
@@ -151,7 +161,7 @@
             }
 
             if (!this.enabled) {
-                ctx.strokeStyle = "#999";
+                ctx.strokeStyle = this.disabledColor;
                 ctx.globalAlpha = 0.5;
             }
             ctx.beginPath();
@@ -168,7 +178,7 @@
             if (this.enabled) {
 
                 if (this.displayValue) {
-                    drawText(this.x + this.position * this.width, this.y + this.height + 15, this.value().toString(), "#FFF", "12pt Calibri", true);
+                    drawText(ctx, this.x + this.position * this.width, this.y + this.height + 15, this.value().toString(), this.color, "12pt Calibri", true);
                 }
             }
 
@@ -179,6 +189,9 @@
             if (this.enabled) {
                 this.hovered = Math.abs(this.x + this.width / 2 - mx) < this.width * this.hoverRange / 2
                     && Math.abs(this.y + this.height / 2 - my) < this.height * this.hoverRange / 2;
+                if (this.hovered) {
+                    pointer = true;
+                }
                 if (mouseDown && this.hovered) {
                     this.position = Math.min(1, Math.max((mx - this.x) / this.width, 0));
                     if (this.precision < 0) {
@@ -228,7 +241,9 @@
 
     var sliders = [];
 
-    var SETTINGS_OFFSET = 10;
+    var SETTINGS_OFFSET = 30;
+    var SPACING_BETWEEN_TEXT_AND_SLIDER = 20;
+    var SPACING_BETWEEN_SLIDERS = 100;
 
     var angularVelocitySlider = Object.create(slider);
     var angularAccelerationSlider = Object.create(slider);
@@ -236,7 +251,8 @@
     var multSlider = Object.create(slider);
 
     angularVelocitySlider.x = 20;
-    angularVelocitySlider.y = SETTINGS_OFFSET;
+    angularVelocitySlider.y = SETTINGS_OFFSET + SPACING_BETWEEN_TEXT_AND_SLIDER + 0*SPACING_BETWEEN_SLIDERS;
+    angularVelocitySlider.color = "#FFF";
     angularVelocitySlider.width = 300;
     angularVelocitySlider.height = 35;
     angularVelocitySlider.minVal = -2700;
@@ -247,11 +263,14 @@
     angularVelocitySlider.waitForInput = false;
     angularVelocitySlider.action = function() {
         angularAcceleration = 0;
+        angularAccelerationSlider.color = "#AAA";
+        this.color = "#FFF";
         angularVelocity = (this.value() * .001) * Math.PI / 180;
     };
 
     angularAccelerationSlider.x = 20;
-    angularAccelerationSlider.y = SETTINGS_OFFSET + 80;
+    angularAccelerationSlider.y = SETTINGS_OFFSET + SPACING_BETWEEN_TEXT_AND_SLIDER + 1*SPACING_BETWEEN_SLIDERS;
+    angularAccelerationSlider.color = "#AAA";
     angularAccelerationSlider.width = 300;
     angularAccelerationSlider.height = 35;
     angularAccelerationSlider.minVal = -1;
@@ -261,15 +280,17 @@
     angularAccelerationSlider.displayValue = false;
     angularAccelerationSlider.waitForInput = false;
     angularAccelerationSlider.action = function() {
+        angularVelocitySlider.color = "#AAA";
+        this.color = "#FFF";
         angularAcceleration = this.value() * .00001;
     };
 
     skewSlider.x = 20;
-    skewSlider.y = SETTINGS_OFFSET + 2*80;
+    skewSlider.y = SETTINGS_OFFSET + SPACING_BETWEEN_TEXT_AND_SLIDER + 2*SPACING_BETWEEN_SLIDERS;
     skewSlider.width = 300;
     skewSlider.height = 35;
-    skewSlider.minVal = -360;
-    skewSlider.maxVal = 360;
+    skewSlider.minVal = -140;
+    skewSlider.maxVal = 140;
     skewSlider.precision = 2;
     skewSlider.position = skewSlider.getPosition(skew / 180 * Math.PI);
     skewSlider.displayValue = false;
@@ -279,7 +300,7 @@
     };
 
     multSlider.x = 20;
-    multSlider.y = SETTINGS_OFFSET + 3*80;
+    multSlider.y = SETTINGS_OFFSET + SPACING_BETWEEN_TEXT_AND_SLIDER + 3*SPACING_BETWEEN_SLIDERS;
     multSlider.width = 300;
     multSlider.height = 35;
     multSlider.minVal = 1;
@@ -290,6 +311,11 @@
     multSlider.waitForInput = false;
     multSlider.action = function() {
         mult = this.value();
+        var val = angularVelocitySlider.value();
+        angularVelocitySlider.minVal = -10800/mult;
+        angularVelocitySlider.maxVal = 10800/mult;
+        angularVelocitySlider.position = angularVelocitySlider.getPosition(
+            Math.max(Math.min(val, angularVelocitySlider.maxVal), angularVelocitySlider.minVal));
     };
 
 
@@ -332,10 +358,37 @@
         ctx.drawImage(tmpCanvas, 0, 0, WIDTH, HEIGHT);
         ctx.restore();
 
-        for (var i = 0; i < sliders.length; i++)
-        {
-            sliders[i].update(x, y, mouseDown);
-            sliders[i].draw(ctx);
+        showDisplayCoolDown -= elapsedTime;
+        if (showDisplayCoolDown < 0) {
+            showDisplayCoolDown = -1;
+            document.body.style.cursor = "none";
+        }
+        else {
+            document.body.style.cursor = "auto";
+
+            var alpha = Math.min(1, showDisplayCoolDown/500);
+            tmpCtx.clearRect(0, 0, WIDTH, HEIGHT);
+
+            drawText(tmpCtx, 10, SETTINGS_OFFSET + 0 * SPACING_BETWEEN_SLIDERS, "Set a constant angular velocity", "#FFF", "14pt Calibri", false);
+            drawText(tmpCtx, 10, SETTINGS_OFFSET + 1 * SPACING_BETWEEN_SLIDERS, "Set a constant angular acceleration", "#FFF", "14pt Calibri", false);
+            drawText(tmpCtx, 10, SETTINGS_OFFSET + 2 * SPACING_BETWEEN_SLIDERS, "Set amount of skew in spirals", "#FFF", "14pt Calibri", false);
+            drawText(tmpCtx, 10, SETTINGS_OFFSET + 3 * SPACING_BETWEEN_SLIDERS, "Set number of repeated spirals", "#FFF", "14pt Calibri", false);
+
+            pointer = false;
+            for (var i = 0; i < sliders.length; i++) {
+                sliders[i].update(x, y, mouseDown);
+                sliders[i].draw(tmpCtx);
+            }
+
+            if (pointer) {
+                document.body.style.cursor = "pointer";
+            }
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.drawImage(tmpCanvas, 0, 0, WIDTH, HEIGHT);
+            ctx.restore();
+
         }
 
         window.requestAnimationFrame(update);
