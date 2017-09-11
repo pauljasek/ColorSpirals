@@ -129,7 +129,7 @@
         y: 0,
         width: 100,
         height: 25,
-        position: .5,
+        value: .5,
         minVal: 0,
         maxVal: 1,
         precision: -1,
@@ -140,10 +140,11 @@
         color: "#FFF",
         disabledColor: "#999",
         displayValue: false,
+        showMarker: true,
         enabled: true,
-        value: function()
+        getValue: function(pos)
         {
-            return this.position * (this.maxVal - this.minVal) + this.minVal;
+            return pos * (this.maxVal - this.minVal) + this.minVal;
         },
         getPosition: function(val)
         {
@@ -170,15 +171,18 @@
             ctx.stroke();
 
             ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(this.x + this.position * this.width, this.y);
-            ctx.lineTo(this.x + this.position * this.width, this.y + this.height);
-            ctx.stroke();
+
+            if (this.showMarker) {
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.getPosition(this.value) * this.width, this.y);
+                ctx.lineTo(this.x + this.getPosition(this.value) * this.width, this.y + this.height);
+                ctx.stroke();
+            }
 
             if (this.enabled) {
 
                 if (this.displayValue) {
-                    drawText(ctx, this.x + this.position * this.width, this.y + this.height + 15, this.value().toString(), this.color, "12pt Calibri", true);
+                    drawText(ctx, this.x + this.getPosition(this.value) * this.width, this.y + this.height + 15, this.value.toString(), this.color, "12pt Calibri", true);
                 }
             }
 
@@ -193,12 +197,12 @@
                     pointer = true;
                 }
                 if (mouseDown && this.hovered) {
-                    this.position = Math.min(1, Math.max((mx - this.x) / this.width, 0));
+                    var position = Math.min(1, Math.max((mx - this.x) / this.width, 0));
                     if (this.precision < 0) {
-                        this.position = this.getPosition(Math.round(this.value() * Math.pow(10, this.precision)) * Math.pow(10, -this.precision));
+                        this.value = Math.round(this.getValue(position) * Math.pow(10, this.precision)) * Math.pow(10, -this.precision);
                     }
                     else {
-                        this.position = this.getPosition(this.value().toFixed(this.precision));
+                        this.value = this.getValue(position).toFixed(this.precision);
                     }
                     if (!this.waitForInput) {
                         this.action();
@@ -238,93 +242,117 @@
     var angularAcceleration = 0;
     var skew = 120 * Math.PI/180;
     var mult = 4;
+    var slices = 100;
+
 
     var sliders = [];
 
-    var SETTINGS_OFFSET = 30;
-    var SPACING_BETWEEN_TEXT_AND_SLIDER = 20;
-    var SPACING_BETWEEN_SLIDERS = 100;
+    var SETTINGS_OFFSET = 50;
+    var SPACING_BETWEEN_TEXT_AND_SLIDER = 25;
+    var SPACING_BETWEEN_SLIDERS = 120;
+    var SLIDER_WIDTH = 500;
+    var SLIDER_HEIGHT = 40;
+
+    var settingsGrad = tmpCtx.createLinearGradient(0, 0, WIDTH/2, 0);
+    settingsGrad.addColorStop(0, "rgba(0,0,0,1)");
+    settingsGrad.addColorStop(1, "rgba(0,0,0,0)");
 
     var angularVelocitySlider = Object.create(slider);
     var angularAccelerationSlider = Object.create(slider);
     var skewSlider = Object.create(slider);
     var multSlider = Object.create(slider);
+    var slicesSlider = Object.create(slider);
 
     angularVelocitySlider.x = 20;
     angularVelocitySlider.y = SETTINGS_OFFSET + SPACING_BETWEEN_TEXT_AND_SLIDER + 0*SPACING_BETWEEN_SLIDERS;
-    angularVelocitySlider.color = "#FFF";
-    angularVelocitySlider.width = 300;
-    angularVelocitySlider.height = 35;
-    angularVelocitySlider.minVal = -2700;
-    angularVelocitySlider.maxVal = 2700;
+    angularVelocitySlider.showMarker = true;
+    angularVelocitySlider.width = SLIDER_WIDTH;
+    angularVelocitySlider.height = SLIDER_HEIGHT;
+    angularVelocitySlider.minVal = 0;
+    angularVelocitySlider.maxVal = 10800/mult;
     angularVelocitySlider.precision = 0;
-    angularVelocitySlider.position = angularVelocitySlider.getPosition(angularVelocity / Math.PI * 180 / .001);
+    angularVelocitySlider.value = angularVelocity / Math.PI * 180 / .001;
     angularVelocitySlider.displayValue = false;
     angularVelocitySlider.waitForInput = false;
     angularVelocitySlider.action = function() {
         angularAcceleration = 0;
-        angularAccelerationSlider.color = "#AAA";
-        this.color = "#FFF";
-        angularVelocity = (this.value() * .001) * Math.PI / 180;
+        this.showMarker = true;
+        angularAccelerationSlider.showMarker = false;
+        angularVelocity = (this.value * .001) * Math.PI / 180;
     };
 
     angularAccelerationSlider.x = 20;
     angularAccelerationSlider.y = SETTINGS_OFFSET + SPACING_BETWEEN_TEXT_AND_SLIDER + 1*SPACING_BETWEEN_SLIDERS;
-    angularAccelerationSlider.color = "#AAA";
-    angularAccelerationSlider.width = 300;
-    angularAccelerationSlider.height = 35;
-    angularAccelerationSlider.minVal = -1;
+    angularAccelerationSlider.showMarker = false;
+    angularAccelerationSlider.width = SLIDER_WIDTH;
+    angularAccelerationSlider.height = SLIDER_HEIGHT;
+    angularAccelerationSlider.minVal = 0;
     angularAccelerationSlider.maxVal = 1;
     angularAccelerationSlider.precision = 2;
-    angularAccelerationSlider.position = angularAccelerationSlider.getPosition(angularAcceleration / .00001);
+    angularAccelerationSlider.value = angularAcceleration / .00001;
     angularAccelerationSlider.displayValue = false;
     angularAccelerationSlider.waitForInput = false;
     angularAccelerationSlider.action = function() {
-        angularVelocitySlider.color = "#AAA";
-        this.color = "#FFF";
-        angularAcceleration = this.value() * .00001;
+        this.showMarker = true;
+        angularVelocitySlider.showMarker = false;
+        angularAcceleration = this.value * .00001;
     };
 
     skewSlider.x = 20;
     skewSlider.y = SETTINGS_OFFSET + SPACING_BETWEEN_TEXT_AND_SLIDER + 2*SPACING_BETWEEN_SLIDERS;
-    skewSlider.width = 300;
-    skewSlider.height = 35;
+    skewSlider.width = SLIDER_WIDTH;
+    skewSlider.height = SLIDER_HEIGHT;
     skewSlider.minVal = -140;
     skewSlider.maxVal = 140;
     skewSlider.precision = 2;
-    skewSlider.position = skewSlider.getPosition(skew / 180 * Math.PI);
+    skewSlider.value = skew / 180 * Math.PI;
     skewSlider.displayValue = false;
     skewSlider.waitForInput = false;
     skewSlider.action = function() {
-        skew = this.value() * Math.PI/180;
+        skew = this.value * Math.PI/180;
     };
 
     multSlider.x = 20;
     multSlider.y = SETTINGS_OFFSET + SPACING_BETWEEN_TEXT_AND_SLIDER + 3*SPACING_BETWEEN_SLIDERS;
-    multSlider.width = 300;
-    multSlider.height = 35;
+    multSlider.width = SLIDER_WIDTH;
+    multSlider.height = SLIDER_HEIGHT;
     multSlider.minVal = 1;
-    multSlider.maxVal = 20;
+    multSlider.maxVal = 50;
     multSlider.precision = 0;
-    multSlider.position = multSlider.getPosition(mult);
+    multSlider.value = mult;
     multSlider.displayValue = true;
     multSlider.waitForInput = false;
     multSlider.action = function() {
-        mult = this.value();
-        var val = angularVelocitySlider.value();
-        angularVelocitySlider.minVal = -10800/mult;
+        mult = this.value;
+        var val = angularVelocitySlider.value;
         angularVelocitySlider.maxVal = 10800/mult;
-        angularVelocitySlider.position = angularVelocitySlider.getPosition(
-            Math.max(Math.min(val, angularVelocitySlider.maxVal), angularVelocitySlider.minVal));
+        angularVelocitySlider.value = Math.min(val, angularVelocitySlider.maxVal);
+        angularVelocitySlider.action();
     };
 
-
+    slicesSlider.x = 20;
+    slicesSlider.y = SETTINGS_OFFSET + SPACING_BETWEEN_TEXT_AND_SLIDER + 4*SPACING_BETWEEN_SLIDERS;
+    slicesSlider.width = SLIDER_WIDTH;
+    slicesSlider.height = SLIDER_HEIGHT;
+    slicesSlider.minVal = 4;
+    slicesSlider.maxVal = 200;
+    slicesSlider.precision = 0;
+    slicesSlider.value = slices;
+    slicesSlider.displayValue = true;
+    slicesSlider.waitForInput = false;
+    slicesSlider.action = function() {
+        slices = this.value;
+        var val = multSlider.value;
+        multSlider.maxVal = Math.floor(slices/2);
+        multSlider.value = Math.min(val, multSlider.maxVal);
+        multSlider.action();
+    };
 
     sliders.push(angularVelocitySlider);
     sliders.push(angularAccelerationSlider);
     sliders.push(skewSlider);
     sliders.push(multSlider);
-
+    sliders.push(slicesSlider);
 
 
     function update(time) {
@@ -369,10 +397,14 @@
             var alpha = Math.min(1, showDisplayCoolDown/500);
             tmpCtx.clearRect(0, 0, WIDTH, HEIGHT);
 
-            drawText(tmpCtx, 10, SETTINGS_OFFSET + 0 * SPACING_BETWEEN_SLIDERS, "Set a constant angular velocity", "#FFF", "14pt Calibri", false);
-            drawText(tmpCtx, 10, SETTINGS_OFFSET + 1 * SPACING_BETWEEN_SLIDERS, "Set a constant angular acceleration", "#FFF", "14pt Calibri", false);
-            drawText(tmpCtx, 10, SETTINGS_OFFSET + 2 * SPACING_BETWEEN_SLIDERS, "Set amount of skew in spirals", "#FFF", "14pt Calibri", false);
-            drawText(tmpCtx, 10, SETTINGS_OFFSET + 3 * SPACING_BETWEEN_SLIDERS, "Set number of repeated spirals", "#FFF", "14pt Calibri", false);
+            tmpCtx.fillStyle = settingsGrad;
+            tmpCtx.fillRect(0, 0, WIDTH, HEIGHT);
+
+            drawText(tmpCtx, 20, SETTINGS_OFFSET + 0 * SPACING_BETWEEN_SLIDERS, "Set a constant angular velocity", "#FFF", "24pt Calibri", false);
+            drawText(tmpCtx, 20, SETTINGS_OFFSET + 1 * SPACING_BETWEEN_SLIDERS, "Set a constant angular acceleration", "#FFF", "24pt Calibri", false);
+            drawText(tmpCtx, 20, SETTINGS_OFFSET + 2 * SPACING_BETWEEN_SLIDERS, "Set amount of skew in spirals", "#FFF", "24pt Calibri", false);
+            drawText(tmpCtx, 20, SETTINGS_OFFSET + 3 * SPACING_BETWEEN_SLIDERS, "Set number of times colors are repeated", "#FFF", "24pt Calibri", false);
+            drawText(tmpCtx, 20, SETTINGS_OFFSET + 4 * SPACING_BETWEEN_SLIDERS, "Set total number of spirals", "#FFF", "24pt Calibri", false);
 
             pointer = false;
             for (var i = 0; i < sliders.length; i++) {
@@ -395,8 +427,6 @@
     }
 
     function updateBackground(ctx, offset, mult, skew) {
-        var slices = 100;
-
         ctx.save();
         ctx.translate(WIDTH/2, HEIGHT/2);
 
