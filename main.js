@@ -327,7 +327,9 @@
         var val = angularVelocitySlider.value;
         angularVelocitySlider.maxVal = 10800/mult;
         angularVelocitySlider.value = Math.min(val, angularVelocitySlider.maxVal);
-        angularVelocitySlider.action();
+        if (angularVelocitySlider.showMarker) {
+            angularVelocitySlider.action();
+        }
     };
 
     slicesSlider.x = 20;
